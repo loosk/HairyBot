@@ -1,2 +1,2 @@
 # Gardenia
-Growing you garden.
+Growing your garden.
