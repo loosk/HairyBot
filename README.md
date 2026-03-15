@@ -1,2 +1,2 @@
-# HairyBot
-RPG bot about hair.
+# Gardenia
+Growing you garden.
