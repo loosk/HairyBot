@@ -3,7 +3,7 @@ const { baseGardenSlots, startingBloomBuck } = require('../constants/config');
 
 const userProfileSchema = new Schema({
     userId: { type: String, required: true, unique: true },
-    coins: { type: Number, default: startingCoins },
+    coins: { type: Number, default: startingBloomBuck },
     maxSlots: { type: Number, default: baseGardenSlots },
     
     // how many seeds they own: { "Wheat": 5, "Tomato": 2 }
