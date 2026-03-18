@@ -22,8 +22,8 @@ module.exports = {
             .setColor('#F1C40F')
             .setThumbnail(interaction.user.displayAvatarURL());
 
-        // coins and garden capacity
-        const statsText = `**Coins:** 🪙 ${profile.coins}\n**Garden Space:** ${profile.activeGarden.length} / ${profile.maxSlots} slots used`;
+        // bloombucks and garden capacity
+        const statsText = `**BloomBuck:** 🪙 ${profile.bloomBuck}\n**Garden Space:** ${profile.activeGarden.length} / ${profile.maxSlots} slots used`;
         embed.addFields({ name: 'Player Stats', value: statsText, inline: false });
 
         // seeds (what they can plant)

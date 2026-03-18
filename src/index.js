@@ -16,7 +16,7 @@ const client = new Client({
 		GatewayIntentBits.Guilds,
 		GatewayIntentBits.GuildMembers,
 		GatewayIntentBits.GuildModeration,
-		GatewayIntentBits.GuildEmojisAndStickers,
+		GatewayIntentBits.GuildExpressions,
 		GatewayIntentBits.GuildIntegrations,
 		GatewayIntentBits.GuildWebhooks,
 		GatewayIntentBits.GuildInvites,
@@ -56,17 +56,14 @@ for (const folder of commandFolders) {
                 client.commands.set(command.data.name, command);
             } else {
                 if (Object.keys(command).length > 0) {
-                    console.log(`[⚠️ WARNING] The command at ${filePath} is missing "data" or "execute".`);
+                    console.log(`[The command at ${filePath} is missing "data" or "execute".`);
                 }
             }
         }
     }
 }
 
-mongoose.connect(process.env.MONGO_URI)
 
-.then(() => console.log("Connected to MongoDB"))
-.catch(err => console.error("MongoDB connection error:", err));
 
 client.on(Events.InteractionCreate, async interaction => {
 	if (!interaction.isChatInputCommand()) return;
@@ -77,7 +74,6 @@ client.on(Events.InteractionCreate, async interaction => {
 		return;
 	}
 
-	// ---------------- Cooldown System ----------------
 	const { cooldowns } = interaction.client;
 
 	if (!cooldowns.has(command.data.name)) {
@@ -120,4 +116,20 @@ client.once(Events.ClientReady, readyClient => {
 	console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
 
-client.login(process.env.DISCORD_TOKEN);
+async function startBot() {
+    try {
+        await mongoose.connect(process.env.MONGO_URI, {
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,     
+            family: 4,    
+        });
+        console.log("Connected to MongoDB!");
+    } catch (err) {
+        console.error("MongoDB connection error:", err);
+        process.exit(1); 
+    }
+
+    client.login(process.env.DISCORD_TOKEN);
+}
+
+startBot();

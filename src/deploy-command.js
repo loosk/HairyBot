@@ -22,7 +22,7 @@ for (const folder of commandFolders) {
                 commands.push(command.data.toJSON());
             } else {
                 if (Object.keys(command).length > 0) {
-                    console.log(`[⚠️ WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+                    console.log(`The command at ${filePath} is missing a required "data" or "execute" property.`);
                 }
             }
         }

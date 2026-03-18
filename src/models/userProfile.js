@@ -3,19 +3,19 @@ const { baseGardenSlots, startingBloomBuck } = require('../constants/config');
 
 const userProfileSchema = new Schema({
     userId: { type: String, required: true, unique: true },
-    coins: { type: Number, default: startingBloomBuck },
+    bloomBuck: { type: Number, default: startingBloomBuck },
     maxSlots: { type: Number, default: baseGardenSlots },
     
-    // how many seeds they own: { "Wheat": 5, "Tomato": 2 }
+    // { "Wheat": 123, "Tomato": 123 }
     seeds: { type: Map, of: Number, default: {} }, 
     
-    // what is currently planted: [{ plantName: "Wheat", readyAt: 167888888 }]
+    // { plantName: "Wheat", readyAt: 123 }
     activeGarden: [{ 
         plantName: String, 
         readyAt: Number 
     }],
     
-    // harvested items waiting to be sold: [{ name: "Wheat", mutation: "Golden", value: 75, amount: 1 }]
+    // { name: "Wheat", mutation: "Golden", value: 123, amount: 123 }
     inventory: [{
         name: String,
         mutation: String,

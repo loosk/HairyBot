@@ -52,7 +52,6 @@ module.exports = {
 
                 harvestResults.push(`${mutation.name} **${plant.plantName}** (Worth 🪙 ${finalValue})`);
             } else {
-                // plant is not ready, keep it in the garden
                 newGarden.push(plant);
             }
         });
@@ -61,7 +60,7 @@ module.exports = {
             return interaction.reply({ content: "None of your plants are ready to harvest yet!", ephemeral: true });
         }
 
-        // save the database
+        // save
         profile.activeGarden = newGarden;
 
         profile.markModified('inventory'); 
