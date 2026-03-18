@@ -33,13 +33,13 @@ module.exports = {
                 ...plantsData[key]
             }));
 
-            const ITEMS_PER_PAGE = 3;
-            const totalPages = Math.ceil(plantsArray.length / ITEMS_PER_PAGE);
+            const itemsPerPage = 3;
+            const totalPages = Math.ceil(plantsArray.length / itemsPerPage);
             let currentPage = 0;
 
             const generateShopUI = () => {
-                const start = currentPage * ITEMS_PER_PAGE;
-                const currentItems = plantsArray.slice(start, start + ITEMS_PER_PAGE);
+                const start = currentPage * itemsPerPage;
+                const currentItems = plantsArray.slice(start, start + itemsPerPage);
 
                 const embed = new EmbedBuilder()
                     .setTitle("The Bloom Shop")
@@ -158,7 +158,7 @@ module.exports = {
                         components: disabledUi.components,
                         content: "*This shop session has expired. Use `/shop` again to buy more.*"
                     });
-                } catch (err)
+                } catch (err) {}
             });
 
         } catch (err) {
