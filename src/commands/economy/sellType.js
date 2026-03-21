@@ -11,8 +11,7 @@ module.exports = {
             option.setName('plant')
                 .setDescription('Which type of plant to sell')
                 .setRequired(true);
-            
-            // Add choices from your plantsData
+
             for (const plantName in plantsData) {
                 option.addChoices({ name: plantName, value: plantName });
             }
@@ -20,7 +19,7 @@ module.exports = {
         }),
 
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply();
 
         try {
             const profile = await UserProfile.findOne({ userId: interaction.user.id });
@@ -60,7 +59,7 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setTitle(`${targetPlant}s Sold!`)
                 .setColor("#2ECC71")
-                .setDescription(`You sold **${soldCount}x** ${targetPlant}(s) for a total of 🪙 **${earnings}** BloomBucks!\n\nYour new balance is 🪙 **${Math.round(profile.bloomBuck)}**.`);
+                .setDescription(`You sold **${soldCount}x** ${targetPlant}(s) for a total of 💵 **${earnings}** BloomBucks!\n\nYour new balance is 💵 **${Math.round(profile.bloomBuck)}**.`);
 
             return interaction.editReply({ embeds: [embed] });
 

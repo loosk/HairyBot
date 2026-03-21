@@ -7,6 +7,8 @@ module.exports = {
         .setDescription("View your currently growing plants."),
 
     async execute(interaction) {
+        await interaction.deferReply();
+
         const profile = await UserProfile.findOne({
             userId: interaction.user.id,
         });
@@ -35,20 +37,26 @@ module.exports = {
             profile.activeGarden.forEach((plant, index) => {
                 const timestamp = Math.floor(plant.readyAt / 1000);
 
-                let mutationText = "";
-                if (plant.mutation && plant.mutation.length > 0) {
-                    mutationText = ` (${plant.mutation.join(", ")})`;
+                let prefix = "";
+
+                if (plant.variant && plant.variant !== 'Normal') {
+                    prefix += `${plant.variant} `;
                 }
 
+                if (plant.mutation && plant.mutation.length > 0) {
+                    prefix += `${plant.mutation.join(' ')} `;
+                }
+                const plantDisplayName = `**${prefix}${plant.plantName}**`;
+
                 if (Date.now() >= plant.readyAt) {
-                    gardenText += `${index + 1}. **${plant.plantName}**${mutationText} - Ready to /harvest!\n`;
+                    gardenText += `${index + 1}. ${plantDisplayName} - Ready to /harvest!\n`;
                 } else {
-                    gardenText += `${index + 1}. **${plant.plantName}**${mutationText} - Growing: <t:${timestamp}:R>\n`;
+                    gardenText += `${index + 1}. ${plantDisplayName} - Growing: <t:${timestamp}:R>\n`;
                 }
             });
             embed.setDescription(embed.data.description + gardenText);
         }
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
     },
 };

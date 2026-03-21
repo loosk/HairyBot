@@ -14,7 +14,7 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply();
 
         try {
             const profile = await UserProfile.findOne({ userId: interaction.user.id });
@@ -47,7 +47,7 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setTitle("Item Sold!")
                 .setColor("#2ECC71")
-                .setDescription(`You sold **${itemName}** for 🪙 **${earnings}** BloomBucks!\n\nYour new balance is 🪙 **${Math.round(profile.bloomBuck)}**.`);
+                .setDescription(`You sold **${itemName}** for 💵 **${earnings}** BloomBucks!\n\nYour new balance is 💵 **${Math.round(profile.bloomBuck)}**.`);
 
             return interaction.editReply({ embeds: [embed] });
 

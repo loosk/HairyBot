@@ -16,7 +16,7 @@ module.exports = {
         .setDescription('View all your harvested plants and mutations.'),
 
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply();
 
         try {
             const profile = await UserProfile.findOne({ userId: interaction.user.id });
@@ -52,9 +52,17 @@ module.exports = {
                 currentItems.forEach((item, index) => {
                     const itemIndex = start + index + 1;
 
-                    const mutationText = item.mutation.length > 0 ? item.mutation.join(' ') + ' ' : '';
+                    let prefix = "";
                     
-                    const fieldName = `${itemIndex}. ${mutationText}${item.name} (${item.weight}kg)`;
+                    if (item.variant && item.variant !== 'Normal') {
+                        prefix += `${item.variant} `;
+                    }
+
+                    if (item.mutation && item.mutation.length > 0) {
+                        prefix += `${item.mutation.join(' ')} `;
+                    }
+            
+                    const fieldName = `${itemIndex}. **${prefix}${item.name}** (${item.weight}kg)`;
                 
                     const fieldValue = `**Sell Value:** 💵 ${Math.round(item.value)}`;
 

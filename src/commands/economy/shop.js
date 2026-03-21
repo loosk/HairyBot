@@ -18,7 +18,8 @@ let nextRefreshTime = 0;
 function refreshShopStock() {
     globalShopItems = {};
     playerPurchases.clear();
-    nextRefreshTime = Date.now() + (5 * 60 * 1000);
+
+    nextRefreshTime = Date.now() + (5 * 60 * 1000); // 5 minutes
 
     for (const [plantName, data] of Object.entries(plantsData)) {
         if (Math.random() <= data.stockChance) {
@@ -34,7 +35,7 @@ module.exports = {
         .setDescription("Open the interactive Bloom Shop to buy seeds and upgrades."),
 
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply();
 
         try {
             const profile = await UserProfile.findOne({ userId: interaction.user.id });
@@ -44,7 +45,9 @@ module.exports = {
                 refreshShopStock();
             }
 
-            const itemsPerPage = 5; 
+            const timeLeft = nextRefreshTime - Date.now();
+
+            const itemsPerPage = 6; 
             let currentPage = 0;
 
             const getMyStock = (plantName) => {
@@ -54,7 +57,7 @@ module.exports = {
             };
 
             const generateShopUI = () => {
-                const availablePlants = Object.keys(globalShopItems).map(key => ({
+                const availablePlants = Object.keys(plantsData).map(key => ({
                     name: key,
                     personalStock: getMyStock(key), 
                     ...plantsData[key]
@@ -68,38 +71,45 @@ module.exports = {
                 const refreshTimestamp = Math.floor(nextRefreshTime / 1000);
 
                 const embed = new EmbedBuilder()
-                    .setTitle("🏪 The Bloom Shop")
+                    .setTitle("The Bloom Shop")
                     .setColor("#F1C40F")
-                    .setDescription(`**Your Wallet:** 🪙 ${profile.bloomBuck}\n**Garden Slots:** ${profile.maxSlots}\n🔄 **Restocks:** <t:${refreshTimestamp}:R>\n\n*Page ${currentPage + 1} of ${totalPages}*`);
-
-                if (currentItems.length === 0) {
-                    embed.addFields({ name: "Sold Out!", value: "The shop is completely empty right now. Check back later!" });
-                }
+                    .setDescription(`**Your Wallet:** 💵 ${Math.round(profile.bloomBuck)}\n**Garden Slots:** ${profile.maxSlots}\n🔄 **Restocks:** <t:${refreshTimestamp}:R>\n\n*Page ${currentPage + 1} of ${totalPages}*`);
 
                 currentItems.forEach(item => {
                     const minMins = Math.round(item.growTimeMin / 60000); 
                     const maxMins = Math.round(item.growTimeMax / 60000); 
-                    const stockStatus = item.personalStock > 0 ? `📦 **${item.personalStock} left in stock!**` : `❌ **SOLD OUT**`;
+                    const stockStatus = item.personalStock > 0 ? ` **${item.personalStock} left in stock!**` : `**SOLD OUT**`;
 
                     embed.addFields({
                         name: `🌱 ${item.name} Seed`,
-                        value: `**Cost:** 🪙 ${item.seedCost}\n**Grows in:** ⏱️ ${minMins}-${maxMins}m\n${stockStatus}`,
-                        inline: false
+                        value: `**Cost:** 💵 ${item.seedCost}\n**Grows in:** ⏱️ ${minMins}-${maxMins}m\n${stockStatus}`,
+                        inline: true
                     });
                 });
 
                 const buyRow = new ActionRowBuilder();
-                currentItems.forEach(item => {
-                    buyRow.addComponents(
-                        new ButtonBuilder()
-                            .setCustomId(`buy_${item.name}`)
-                            .setLabel(item.personalStock > 0 ? `Buy ${item.name}` : "Sold Out")
-                            .setStyle(item.personalStock > 0 ? ButtonStyle.Primary : ButtonStyle.Secondary)
-                            .setDisabled(item.personalStock <= 0)
-                    );
-                });
+                const navRow = new ActionRowBuilder();
+                const components = [];
 
-                const navRow = new ActionRowBuilder().addComponents(
+                if (currentItems.length > 0) {
+                    let currentRow = new ActionRowBuilder();
+                    currentItems.forEach((item, index) => {
+                        if (index > 0 && index % 5 === 0) {
+                            components.push(currentRow);
+                            currentRow = new ActionRowBuilder();
+                        }
+                        currentRow.addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`buy_${item.name}`)
+                                .setLabel(item.personalStock > 0 ? `Buy ${item.name}` : "Sold Out")
+                                .setStyle(item.personalStock > 0 ? ButtonStyle.Primary : ButtonStyle.Secondary)
+                                .setDisabled(item.personalStock <= 0)
+                        );
+                    });
+                    components.push(currentRow);
+                }
+
+                navRow.addComponents(
                     new ButtonBuilder()
                         .setCustomId("prev")
                         .setEmoji("◀️")
@@ -108,7 +118,7 @@ module.exports = {
                         
                     new ButtonBuilder()
                         .setCustomId("upgrade")
-                        .setLabel(`Upgrade Garden (🪙 ${liveUpgradeCost})`)
+                        .setLabel(`Upgrade Garden (💵 ${liveUpgradeCost})`)
                         .setStyle(ButtonStyle.Success),
                         
                     new ButtonBuilder()
@@ -117,8 +127,9 @@ module.exports = {
                         .setStyle(ButtonStyle.Secondary)
                         .setDisabled(currentPage >= totalPages - 1)
                 );
+                
+                components.push(navRow);
 
-                const components = currentItems.length > 0 ? [buyRow, navRow] : [navRow];
                 return { embeds: [embed], components: components };
             };
 
@@ -126,7 +137,7 @@ module.exports = {
 
             const collector = response.createMessageComponentCollector({ 
                 componentType: ComponentType.Button, 
-                time: 120000 
+                time: timeLeft 
             });
 
             collector.on("collect", async (i) => {
@@ -138,7 +149,7 @@ module.exports = {
                     refreshShopStock();
                     currentPage = 0; 
                     await i.update(generateShopUI());
-                    return i.followUp({ content: "🔄 The shop just restocked! Prices and stock have changed.", ephemeral: true });
+                    return i.followUp({ content: "The shop just restocked! Prices and stock have changed.", ephemeral: true });
                 }
 
                 if (i.customId === "prev") {
@@ -155,7 +166,7 @@ module.exports = {
                     const currentCost = profile.currentUpgradeCost || 500;
 
                     if (profile.bloomBuck < currentCost) {
-                        return i.reply({ content: `You need 🪙 **${currentCost}** to upgrade!`, ephemeral: true });
+                        return i.reply({ content: `You need 💵 **${currentCost}** to upgrade!`, ephemeral: true });
                     }
 
                     profile.bloomBuck -= currentCost;
@@ -164,7 +175,7 @@ module.exports = {
                     await profile.save();
                     
                     await i.update(generateShopUI()); 
-                    return i.followUp({ content: `🏡 Upgraded! You now have **${profile.maxSlots}** slots.`, ephemeral: true });
+                    return i.followUp({ content: `Upgraded! You now have **${profile.maxSlots}** slots.`, ephemeral: true });
                 }
 
                 if (i.customId.startsWith("buy_")) {
@@ -191,18 +202,24 @@ module.exports = {
                     playerPurchases.set(interaction.user.id, userHistory);
 
                     await i.update(generateShopUI());
-                    return i.followUp({ content: `🛍️ Bought **1x ${seedName} Seed**!`, ephemeral: true });
+                    return i.followUp({ content: `Bought **1x ${seedName} Seed**!`, ephemeral: true });
                 }
             });
 
-            collector.on("end", async () => {
+            collector.on("end", async (collected, reason) => {
                 try {
                     const disabledUi = generateShopUI();
                     disabledUi.components.forEach(row => row.components.forEach(button => button.setDisabled(true)));
+                    
+                    let endMessage = "*This shop session has expired.*";
+                    if (reason === 'time') {
+                        endMessage = "**The shop just restocked! Please run `/shop` again to see the new stock.**";
+                    }
+
                     await interaction.editReply({ 
                         embeds: disabledUi.embeds, 
                         components: disabledUi.components,
-                        content: "*This shop session has expired.*"
+                        content: endMessage
                     });
                 } catch (err) {}
             });

@@ -9,7 +9,7 @@ module.exports = {
         .setDescription('View your balance.'),
 
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply();
 
         try {
             const profile = await UserProfile.findOne({ userId: interaction.user.id });
