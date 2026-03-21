@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js')
-const { getInGameTime } = require('../../utils/getInGameTime')
+const { getGameEpoch, decodeGameEpoch } = require('../../utils/timeSystem')
+const { gameData } = require('../../gameData')
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -14,13 +15,25 @@ module.exports = {
 				`The in-game environment affects plant growth and mutation chances. Check back regularly to see how the environment changes!`,
 			)
 
-		const { formatted, isDay } = getInGameTime()
+		const { formatted, isDay } = decodeGameEpoch(getGameEpoch())
+
+		const lastWeatherEventTime =
+			gameData.lastWeatherEvent === null
+				? null
+				: decodeGameEpoch(gameData.lastWeatherEvent.timestamp)
 
 		embed.addFields(
-			{ name: 'Current Time', value: formatted, inline: false },
+			{ name: 'Current Time', value: formatted, inline: true },
 			{
 				name: 'Environment',
 				value: isDay ? 'Day 🌞' : 'Night 🌜',
+				inline: true,
+			},
+			{
+				name: 'Last Weather Event',
+				value: gameData.lastWeatherEvent
+					? `${gameData.lastWeatherEvent.selectedMutation.name} (happened at ${lastWeatherEventTime.formatted})`
+					: 'No weather events have occurred yet.',
 				inline: false,
 			},
 		)

@@ -1,5 +1,7 @@
 const config = require('../constants/config')
 const { startMutations } = require('./startMutations')
+const { getGameEpoch } = require('./timeSystem')
+const { gameData } = require('../gameData')
 
 const startWeatherEvent = async () => {
 	const weightSum = config.mutations.reduce(
@@ -23,6 +25,11 @@ const startWeatherEvent = async () => {
 		console.log(
 			`Selected Mutation ${selectedMutation.name} for weather event.`,
 		)
+
+		gameData.lastWeatherEvent = {
+			timestamp: getGameEpoch(),
+			selectedMutation,
+		}
 
 		const result = await startMutations(selectedMutation)
 
