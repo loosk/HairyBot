@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js')
 const { startMutations } = require('../../utils/startMutations')
 const config = require('../../constants/config')
+const { isAdmin } = require('../../utils/isAdmin')  
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -20,7 +21,14 @@ module.exports = {
 		),
 
 	async execute(interaction) {
-		// TODO: Only for admins
+		if (!isAdmin(interaction.user.id)) {
+			await interaction.reply({
+				content: 'You do not have permission to use this command.',
+				ephemeral: true,
+			})
+
+			return
+		}
 
 		const mutationName = interaction.options.getString('mutation')
 
