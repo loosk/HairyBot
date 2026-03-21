@@ -15,4 +15,9 @@ module.exports = {
 		{ name: 'Wet', affectedChance: 0.9, occuranceWeight: 200, multiplier: 1.5 },
 		{ name: 'Shocked', affectedChance: 0.3, occuranceWeight: 100, multiplier: 5 },
 	],
+
+    weatherEvents: {
+        minummInterval:  10*60 * 1000, // 10 minutes
+        maximumInterval:  20 * 60 * 1000, // 20 minutes
+    }
 }
