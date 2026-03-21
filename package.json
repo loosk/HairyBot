@@ -14,7 +14,8 @@
 	"type": "commonjs",
 	"main": "index.js",
 	"scripts": {
-		"start": "node ./src/index.js"
+		"start": "node ./src/index.js",
+		"deploy:commands": "node ./src/deploy-commands.js"
 	},
 	"dependencies": {
 		"discord.js": "^14.25.1",
