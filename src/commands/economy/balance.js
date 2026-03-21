@@ -6,20 +6,29 @@ const { sendNoProfileMessage } = require('../../utils/showNoProfileMessage');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('balance') 
-        .setDescription('View your balance.'),
+        .setDescription('View your balance.')
+
+        .addUserOption(option =>
+            option.setName('user')
+                .setDescription('The user you want to view')
+                .setRequired(false)
+    ),
+
 
     async execute(interaction) {
         await interaction.deferReply();
 
         try {
-            const profile = await UserProfile.findOne({ userId: interaction.user.id });
+            const targetUser = interaction.options.getUser('user') || interaction.user;
+
+            const profile = await UserProfile.findOne({ userId: targetUser.id });
 
             if (!profile) {
                 return sendNoProfileMessage(interaction);
             }
             
             const embed = new EmbedBuilder()
-                .setTitle(`${interaction.user.username}'s Balance`)
+                .setTitle(`${targetUser.username}'s Balance`)
                 .setColor('#2ECC71')
                 .setDescription(`**${profile.bloomBuck}** BloomBucks 💵`);
 

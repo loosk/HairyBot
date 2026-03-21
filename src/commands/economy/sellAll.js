@@ -5,7 +5,7 @@ const { sendNoProfileMessage } = require('../../utils/showNoProfileMessage');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("sellall")
-        .setDescription("Sell absolutely everything in your inventory."),
+        .setDescription("Sell all items in your inventory that are not favorited."),
 
     async execute(interaction) {
         await interaction.deferReply();
@@ -21,23 +21,37 @@ module.exports = {
                 return interaction.editReply("You have no harvested crops to sell! Use `/garden` to grow more.");
             }
 
-            const itemCount = profile.inventory.length;
-            const totalEarnings = Math.round(profile.inventory.reduce((sum, item) => sum + item.value, 0));
+            const sellableItems = profile.inventory.filter(item => !item.isFavorited);
+            const favoritedItems = profile.inventory.filter(item => item.isFavorited);
+
+            if (sellableItems.length === 0) {
+                return interaction.editReply("You have no items to sell because all items are favorited. Unfavorite some first!");
+            }
+
+            const totalEarnings = Math.round(sellableItems.reduce((sum, item) => sum + item.value, 0));
 
             profile.bloomBuck += totalEarnings;
-            profile.inventory = [];
+
+            profile.inventory = favoritedItems;
+
             await profile.save();
 
             const embed = new EmbedBuilder()
-                .setTitle("All Items Sold!")
+                .setTitle("Items Sold!")
                 .setColor("#2ECC71")
-                .setDescription(`You sold all **${itemCount}** items from your inventory for a total of 💵 **${totalEarnings}** BloomBucks!\n\nYour new balance is 🪙 **${Math.round(profile.bloomBuck)}**.`);
+                .setDescription(
+                    `You sold **${sellableItems.length}** items from your inventory for a total of 💵 **${totalEarnings}** BloomBucks!\n\n` +
+                    `Your new balance is 💵 **${Math.round(profile.bloomBuck)}**.` +
+                    (favoritedItems.length > 0 
+                        ? `\n\n**${favoritedItems.length} favorited item(s) were not sold.**` 
+                        : '')
+                );
 
             return interaction.editReply({ embeds: [embed] });
 
         } catch (err) {
             console.error("Error in /sellall command:", err);
-            return interaction.editReply("Something went wrong while trying to sell all your crops.");
+            return interaction.editReply("Something went wrong while trying to sell your crops.");
         }
     },
 };

@@ -38,6 +38,10 @@ module.exports = {
 
             const plantToHarvest = profile.activeGarden[arrayIndex];
 
+            if (plantToHarvest.isFavorited) {
+                return interaction.editReply({ content: "You cannot harvest this plant because it is **favorited**. Unfavorite it first to harvest." });
+            }
+
             if (Date.now() < plantToHarvest.readyAt) {
                 const timestamp = Math.floor(plantToHarvest.readyAt / 1000);
                 return interaction.editReply({ content: `That plant is not ready yet! It will be fully grown <t:${timestamp}:R>.` });
@@ -62,7 +66,8 @@ module.exports = {
                 mutation: mutation, 
                 variant: variant,
                 value: Math.round(baseMutatedValue),
-                weight: weight
+                weight: weight,
+                isFavorited: false
             });
 
             let prefix = "";

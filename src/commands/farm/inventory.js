@@ -13,13 +13,21 @@ const { sendNoProfileMessage } = require('../../utils/showNoProfileMessage');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('inventory')
-        .setDescription('View all your harvested plants and mutations.'),
+        .setDescription('View all your harvested plants and mutations.')
+
+        .addUserOption(option =>
+            option.setName('user')
+                .setDescription('The user you want to view')
+                .setRequired(false)
+    ),
 
     async execute(interaction) {
         await interaction.deferReply();
 
         try {
-            const profile = await UserProfile.findOne({ userId: interaction.user.id });
+            const targetUser = interaction.options.getUser('user') || interaction.user;
+
+            const profile = await UserProfile.findOne({ userId: targetUser.id });
 
             if (!profile) {
                 return sendNoProfileMessage(interaction);
@@ -27,7 +35,7 @@ module.exports = {
 
             if (!profile.inventory || profile.inventory.length === 0) {
                 const emptyEmbed = new EmbedBuilder()
-                    .setTitle(`${interaction.user.username}'s Inventory`)
+                    .setTitle(`${targetUser.username}'s Inventory`)
                     .setColor('#E74C3C')
                     .setDescription("Your inventory is completely empty! Harvest some crops from your `/garden`.");
                 
@@ -45,7 +53,7 @@ module.exports = {
                 const currentItems = profile.inventory.slice(start, start + itemsPerPage);
 
                 const embed = new EmbedBuilder()
-                    .setTitle(`${interaction.user.username}'s Harvested Crops`)
+                    .setTitle(`${targetUser.username}'s Harvested Crops`)
                     .setColor('#3498DB')
                     .setDescription(`**Total Inventory Value:** 💵 ${totalInventoryValue} BloomBucks\n\n*Page ${currentPage + 1} of ${totalPages}*`);
 
@@ -105,7 +113,7 @@ module.exports = {
                 });
 
                 collector.on("collect", async (i) => {
-                    if (i.user.id !== interaction.user.id) {
+                    if (i.user.id !== targetUser.id) {
                         return i.reply({ content: "You cannot click buttons on someone else's inventory!", ephemeral: true });
                     }
 

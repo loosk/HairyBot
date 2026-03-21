@@ -4,20 +4,29 @@ const UserProfile = require('../../models/userProfile');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('profile')
-        .setDescription('View everything about your seeds, active garden, etc'),
+        .setDescription('View everything about your seeds, active garden, etc')
+
+        .addUserOption(option =>
+            option.setName('user')
+                .setDescription('The user you want to view')
+                .setRequired(false)
+    ),
 
     async execute(interaction) {
-        const profile = await UserProfile.findOne({ userId: interaction.user.id });
+        const targetUser = interaction.options.getUser('user') || interaction.user;
+
+        const profile = await UserProfile.findOne({ userId: targetUser.id });
         
         const { sendNoProfileMessage } = require('../../utils/showNoProfileMessage');
+
         if (!profile) {
             return sendNoProfileMessage(interaction)
         }
 
         const embed = new EmbedBuilder()
-            .setTitle(`${interaction.user.username}'s Profile`)
+            .setTitle(`${targetUser.username}'s Profile`)
             .setColor('#F1C40F')
-            .setThumbnail(interaction.user.displayAvatarURL());
+            .setThumbnail(targetUser.displayAvatarURL());
 
         // bloombucks and garden capacity
         const statsText = `**BloomBuck:** ${profile.bloomBuck}\n**Garden Space:** ${profile.activeGarden.length} / ${profile.maxSlots} slots used`;

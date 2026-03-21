@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const UserProfile = require("../../models/userProfile");
 const { sendNoProfileMessage } = require('../../utils/showNoProfileMessage');
-const plantsData = require('../../data/plantsData'); // Adjust path to your plantsData if needed
+const plantsData = require('../../data/plantsData'); // Adjust path if needed
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -39,7 +39,7 @@ module.exports = {
             const keptItems = [];
 
             for (const item of profile.inventory) {
-                if (item.name === targetPlant) {
+                if (item.name === targetPlant && !item.isFavorited) {
                     earnings += item.value;
                     soldCount++;
                 } else {
@@ -48,6 +48,10 @@ module.exports = {
             }
 
             if (soldCount === 0) {
+                const favoritedCount = profile.inventory.filter(item => item.name === targetPlant && item.isFavorited).length;
+                if (favoritedCount > 0) {
+                    return interaction.editReply(`All your **${targetPlant}** crops are favorited. Unfavorite them first to sell.`);
+                }
                 return interaction.editReply(`You don't have any **${targetPlant}** crops in your inventory to sell.`);
             }
 
@@ -59,7 +63,13 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setTitle(`${targetPlant}s Sold!`)
                 .setColor("#2ECC71")
-                .setDescription(`You sold **${soldCount}x** ${targetPlant}(s) for a total of 💵 **${earnings}** BloomBucks!\n\nYour new balance is 💵 **${Math.round(profile.bloomBuck)}**.`);
+                .setDescription(
+                    `You sold **${soldCount}x** ${targetPlant}(s) for a total of 💵 **${earnings}** BloomBucks!\n\n` +
+                    `Your new balance is 💵 **${Math.round(profile.bloomBuck)}**.` +
+                    (profile.inventory.some(item => item.name === targetPlant && item.isFavorited)
+                        ? `\n\n**Some ${targetPlant} crops were favorited and not sold.**`
+                        : '')
+                );
 
             return interaction.editReply({ embeds: [embed] });
 

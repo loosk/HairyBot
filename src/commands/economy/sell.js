@@ -28,17 +28,22 @@ module.exports = {
             }
 
             const itemIndex = interaction.options.getInteger('index');
-            const arrayIndex = itemIndex - 1; // Convert 1-based index to 0-based array index
+            const arrayIndex = itemIndex - 1;
 
             if (arrayIndex < 0 || arrayIndex >= profile.inventory.length) {
                 return interaction.editReply(`Invalid item index. You only have ${profile.inventory.length} items. Check \`/inventory\` for the correct number.`);
             }
 
             const itemToSell = profile.inventory[arrayIndex];
+
+            if (itemToSell.isFavorited) {
+                return interaction.editReply("You cannot sell this item because it is **favorited**. Unfavorite it first to sell.");
+            }
+
             const earnings = Math.round(itemToSell.value);
 
             profile.bloomBuck += earnings;
-            profile.inventory.splice(arrayIndex, 1); // Remove from array
+            profile.inventory.splice(arrayIndex, 1);
             await profile.save();
             
             const mutationText = itemToSell.mutation.length > 0 ? itemToSell.mutation.join(' ') + ' ' : '';

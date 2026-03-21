@@ -16,7 +16,8 @@ const userProfileSchema = new Schema({
         mutation: [String],
         variant: String,
         weight: Number, 
-        readyAt: Number 
+        readyAt: Number,
+        isFavorited: { type: Boolean, default: false }
     }],
     
     // { name: "Wheat", mutation: "Golden", value: 123, amount: 123 }
@@ -25,7 +26,8 @@ const userProfileSchema = new Schema({
         mutation: [String],
         variant: String,
         value: Number,
-        weight: Number
+        weight: Number,
+        isFavorited: { type: Boolean, default: false }
     }]
 });
 

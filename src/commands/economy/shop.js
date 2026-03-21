@@ -4,7 +4,10 @@ const {
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle, 
-    ComponentType 
+    ComponentType,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle
 } = require("discord.js");
 
 const UserProfile = require("../../models/userProfile");
@@ -82,7 +85,7 @@ module.exports = {
 
                     embed.addFields({
                         name: `🌱 ${item.name} Seed`,
-                        value: `**Cost:** 💵 ${item.seedCost}\n**Grows in:** ⏱️ ${minMins}-${maxMins}m\n${stockStatus}`,
+                        value: `**Cost:** 💵 ${item.seedCost}\n**Grows in:** ⏱${minMins}-${maxMins}m\n${stockStatus}`,
                         inline: true
                     });
                 });
@@ -181,28 +184,73 @@ module.exports = {
                 if (i.customId.startsWith("buy_")) {
                     const seedName = i.customId.split("_")[1]; 
                     const plantInfo = plantsData[seedName];
+                    const myInitialStock = getMyStock(seedName);
 
-                    const myStock = getMyStock(seedName);
-                    if (myStock <= 0) {
-                        await i.update(generateShopUI());
-                        return i.followUp({ content: `You have bought your entire allowance of **${seedName} Seeds** for this rotation! Wait for the restock.`, ephemeral: true });
+                    if (myInitialStock <= 0) {
+                        return i.reply({ content: `You have bought your entire allowance of **${seedName} Seeds**! Wait for the restock.`, ephemeral: true });
                     }
 
-                    if (profile.bloomBuck < plantInfo.seedCost) {
-                        return i.reply({ content: `You don't have enough BloomBucks!`, ephemeral: true });
-                    }
+                    const modalId = `buy_modal_${seedName}`;
+                    const modal = new ModalBuilder()
+                        .setCustomId(modalId)
+                        .setTitle(`Buying ${seedName} Seeds`);
 
-                    profile.bloomBuck -= plantInfo.seedCost;
-                    const currentSeeds = profile.seeds.get(seedName) || 0;
-                    profile.seeds.set(seedName, currentSeeds + 1);
-                    await profile.save();
+                    const amountInput = new TextInputBuilder()
+                        .setCustomId('amount_input')
+                        .setLabel(`How many? (Max: ${myInitialStock})`)
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(true)
+                        .setPlaceholder('Enter a number...')
+                        .setMinLength(1)
+                        .setMaxLength(4);
 
-                    const userHistory = playerPurchases.get(interaction.user.id) || {};
-                    userHistory[seedName] = (userHistory[seedName] || 0) + 1;
-                    playerPurchases.set(interaction.user.id, userHistory);
+                    const actionRow = new ActionRowBuilder().addComponents(amountInput);
+                    modal.addComponents(actionRow);
 
-                    await i.update(generateShopUI());
-                    return i.followUp({ content: `Bought **1x ${seedName} Seed**!`, ephemeral: true });
+                    await i.showModal(modal);
+
+                    try {
+                        const modalSubmit = await i.awaitModalSubmit({
+                            filter: (mi) => mi.customId === modalId && mi.user.id === interaction.user.id,
+                            time: 60000 
+                        });
+
+                        if (Date.now() >= nextRefreshTime) {
+                            return modalSubmit.reply({ content: "The shop restocked while you were deciding! Please check the new stock.", ephemeral: true });
+                        }
+
+                        const amountStr = modalSubmit.fields.getTextInputValue('amount_input');
+                        const amount = parseInt(amountStr, 10);
+
+                        if (isNaN(amount) || amount <= 0) {
+                            return modalSubmit.reply({ content: "That is not a valid number! Please try again.", ephemeral: true });
+                        }
+
+                        const currentStock = getMyStock(seedName);
+                        
+                        if (amount > currentStock) {
+                            return modalSubmit.reply({ content: `You can't buy that many! You can only buy up to **${currentStock}**.`, ephemeral: true });
+                        }
+
+                        const totalCost = plantInfo.seedCost * amount;
+                        if (profile.bloomBuck < totalCost) {
+                            return modalSubmit.reply({ content: `You need 💵 **${totalCost}** to buy ${amount}x ${seedName} seeds!`, ephemeral: true });
+                        }
+
+                        profile.bloomBuck -= totalCost;
+                        const currentSeeds = profile.seeds.get(seedName) || 0;
+                        profile.seeds.set(seedName, currentSeeds + amount);
+                        await profile.save();
+
+                        const userHistory = playerPurchases.get(interaction.user.id) || {};
+                        userHistory[seedName] = (userHistory[seedName] || 0) + amount;
+                        playerPurchases.set(interaction.user.id, userHistory);
+
+                        await modalSubmit.update(generateShopUI());
+
+                        return modalSubmit.followUp({ content: `Bought **${amount}x ${seedName} Seed(s)** for 💵 **${totalCost}**!`, ephemeral: true });
+
+                    } catch (error) {}
                 }
             });
 

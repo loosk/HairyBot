@@ -78,7 +78,8 @@ module.exports = {
                     plantName: seedName,
                     readyAt: readyTime,
                     weight: roundedWeight,
-                    variant: rolledVariantsName
+                    variant: rolledVariantsName,
+                    isFavorited: false
                 });
             }
 
@@ -91,9 +92,9 @@ module.exports = {
 
             if (requestedAmount > amountToPlant) {
                 if (amountToPlant === availableSlots) {
-                    replyMessage += `\n*(Note: You only had ${availableSlots} empty garden slots left!)*`;
+                    replyMessage += `\n**(You only had ${availableSlots} empty garden slots left!)**`;
                 } else if (amountToPlant === seedCount) {
-                    replyMessage += `\n*(Note: You only had ${seedCount} seeds!)*`;
+                    replyMessage += `\n**(You only had ${seedCount} seeds!)**`;
                 }
             }
 
