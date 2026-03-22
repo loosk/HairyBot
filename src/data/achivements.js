@@ -169,7 +169,7 @@ const achivements = [
 		rewards: [
 			{
 				type: 'bloomBuck',
-				amount: amount * 10,
+				amount: amount * 100,
 			},
 		],
 		isMeta: true,

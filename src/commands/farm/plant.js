@@ -4,6 +4,9 @@ const plantsData = require('../../data/plantsData')
 const { sendNoProfileMessage } = require('../../utils/showNoProfileMessage')
 const { getVariants } = require('../../utils/getVariants')
 const { checkAchievements } = require('../../utils/checkAchievements')
+const {
+	processNewlyUnlockedAchievements,
+} = require('../../utils/processNewlyUnlockedAchievements')
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -114,7 +117,7 @@ module.exports = {
 			profile.markModified('seeds')
 			profile.markModified('tracking')
 
-			await checkAchievements(profile)
+			const newlyUnlockedAchievements = await checkAchievements(profile)
 
 			await profile.save()
 
@@ -130,6 +133,13 @@ module.exports = {
 			}
 
 			await interaction.editReply({ content: replyMessage })
+
+			await processNewlyUnlockedAchievements(
+				interaction,
+				newlyUnlockedAchievements,
+			)
+
+			return
 		} catch (err) {
 			console.error('Error in /plant:', err)
 			await interaction.editReply({

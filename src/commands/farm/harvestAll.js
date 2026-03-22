@@ -4,6 +4,9 @@ const plantsData = require('../../data/plantsData')
 const { sendNoProfileMessage } = require('../../utils/showNoProfileMessage')
 const { calculatePlantValue } = require('../../utils/calculatePlantValue')
 const { checkAchievements } = require('../../utils/checkAchievements')
+const {
+	processNewlyUnlockedAchievements,
+} = require('../../utils/processNewlyUnlockedAchievements')
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -99,7 +102,7 @@ module.exports = {
 
 			profile.markModified('tracking')
 
-			await checkAchievements(profile)
+			const newlyUnlockedAchievements = await checkAchievements(profile)
 
 			await profile.save()
 
@@ -113,6 +116,11 @@ module.exports = {
 				.setFooter({ text: 'Use /inventory to see your crops!' })
 
 			await interaction.editReply({ embeds: [embed] })
+
+			await processNewlyUnlockedAchievements(
+				interaction,
+				newlyUnlockedAchievements,
+			)
 		} catch (err) {
 			console.error('Error in /harvestall:', err)
 			await interaction.editReply({

@@ -3,6 +3,9 @@ const UserProfile = require('../../models/userProfile')
 const { sendNoProfileMessage } = require('../../utils/showNoProfileMessage')
 const plantsData = require('../../data/plantsData') // Adjust path if needed
 const { checkAchievements } = require('../../utils/checkAchievements')
+const {
+	processNewlyUnlockedAchievements,
+} = require('../../utils/processNewlyUnlockedAchievements')
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -81,7 +84,7 @@ module.exports = {
 
 			profile.markModified('tracking')
 
-			await checkAchievements(profile)
+			const newlyUnlockedAchievements = await checkAchievements(profile)
 
 			await profile.save()
 
@@ -99,7 +102,12 @@ module.exports = {
 							: ''),
 				)
 
-			return interaction.editReply({ embeds: [embed] })
+			await interaction.editReply({ embeds: [embed] })
+
+			await processNewlyUnlockedAchievements(
+				interaction,
+				newlyUnlockedAchievements,
+			)
 		} catch (err) {
 			console.error('Error in /selltype command:', err)
 			return interaction.editReply(

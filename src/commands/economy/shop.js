@@ -10,6 +10,9 @@ const {
 	TextInputStyle,
 } = require('discord.js')
 const { checkAchievements } = require('../../utils/checkAchievements')
+const {
+	processNewlyUnlockedAchievements,
+} = require('../../utils/processNewlyUnlockedAchievements')
 
 const UserProfile = require('../../models/userProfile')
 const plantsData = require('../../data/plantsData')
@@ -315,7 +318,8 @@ module.exports = {
 
 						profile.markModified('tracking')
 
-						await checkAchievements(profile)
+						const newlyUnlockedAchievements =
+							await checkAchievements(profile)
 
 						await profile.save()
 
@@ -327,10 +331,17 @@ module.exports = {
 
 						await modalSubmit.update(generateShopUI())
 
-						return modalSubmit.followUp({
+						await modalSubmit.followUp({
 							content: `Bought **${amount}x ${seedName} Seed(s)** for 💵 **${totalCost}**!`,
 							ephemeral: true,
 						})
+
+						await processNewlyUnlockedAchievements(
+							interaction,
+							newlyUnlockedAchievements,
+						)
+
+						return
 					} catch (error) {
 						console.error('Error handling purchase modal:', error)
 						return i.followUp({

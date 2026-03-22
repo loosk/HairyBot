@@ -2,6 +2,9 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js')
 const UserProfile = require('../../models/userProfile')
 const { sendNoProfileMessage } = require('../../utils/showNoProfileMessage')
 const { checkAchievements } = require('../../utils/checkAchievements')
+const {
+	processNewlyUnlockedAchievements,
+} = require('../../utils/processNewlyUnlockedAchievements')
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -69,7 +72,7 @@ module.exports = {
 
 			profile.markModified('tracking')
 
-			await checkAchievements(profile)
+			const newlyUnlockedAchievements = await checkAchievements(profile)
 
 			await profile.save()
 
@@ -86,10 +89,15 @@ module.exports = {
 					`You sold **${itemName}** for 💵 **${earnings}** BloomBucks!\n\nYour new balance is 💵 **${Math.round(profile.bloomBuck)}**.`,
 				)
 
-			return interaction.editReply({ embeds: [embed] })
+			await interaction.editReply({ embeds: [embed] })
+
+			await processNewlyUnlockedAchievements(
+				interaction,
+				newlyUnlockedAchievements,
+			)
 		} catch (err) {
 			console.error('Error in /sell command:', err)
-			return interaction.editReply(
+			return await interaction.editReply(
 				'Something went wrong while trying to sell your crop.',
 			)
 		}
