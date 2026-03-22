@@ -25,6 +25,12 @@ const achivements = [
 					plant: plantName,
 					amount,
 				},
+				rewards: [
+					{
+						type: 'bloomBuck',
+						amount: amount * plantsData[plantName].seedCost * 10,
+					},
+				],
 				isMeta: false,
 			})),
 			{
@@ -35,6 +41,12 @@ const achivements = [
 					plant: null,
 					amount,
 				},
+				rewards: [
+					{
+						type: 'bloomBuck',
+						amount: amount * 10,
+					},
+				],
 				isMeta: false,
 			},
 		])
@@ -49,6 +61,12 @@ const achivements = [
 					plant: plantName,
 					amount,
 				},
+				rewards: [
+					{
+						type: 'bloomBuck',
+						amount: amount * plantsData[plantName].seedCost * 10,
+					},
+				],
 				isMeta: false,
 			})),
 			{
@@ -59,6 +77,12 @@ const achivements = [
 					plant: null,
 					amount,
 				},
+				rewards: [
+					{
+						type: 'bloomBuck',
+						amount: amount * 10,
+					},
+				],
 				isMeta: false,
 			},
 		])
@@ -73,6 +97,12 @@ const achivements = [
 					plant: plantName,
 					amount,
 				},
+				rewards: [
+					{
+						type: 'bloomBuck',
+						amount: amount * plantsData[plantName].seedCost * 10,
+					},
+				],
 				isMeta: false,
 			})),
 			{
@@ -83,6 +113,12 @@ const achivements = [
 					plant: null,
 					amount,
 				},
+				rewards: [
+					{
+						type: 'bloomBuck',
+						amount: amount * 10,
+					},
+				],
 				isMeta: false,
 			},
 		])
@@ -97,6 +133,12 @@ const achivements = [
 					plant: plantName,
 					amount,
 				},
+				rewards: [
+					{
+						type: 'bloomBuck',
+						amount: amount * plantsData[plantName].seedCost * 10,
+					},
+				],
 				isMeta: false,
 			})),
 			{
@@ -107,6 +149,12 @@ const achivements = [
 					plant: null,
 					amount,
 				},
+				rewards: [
+					{
+						type: 'bloomBuck',
+						amount: amount * 10,
+					},
+				],
 				isMeta: false,
 			},
 		])
@@ -118,6 +166,12 @@ const achivements = [
 		meta: {
 			amount,
 		},
+		rewards: [
+			{
+				type: 'bloomBuck',
+				amount: amount * 10,
+			},
+		],
 		isMeta: true,
 	})),
 ]
