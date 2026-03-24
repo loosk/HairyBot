@@ -122,7 +122,7 @@ module.exports = {
 			await profile.save()
 
 			const discordTimestamp = Math.floor(maxReadyTime / 1000)
-			let replyMessage = `You planted **${amountToPlant}x ${seedName}**! They will all be ready to harvest by <t:${discordTimestamp}:R>.`
+			let replyMessage = `You planted **${amountToPlant}x ${seedName}**!.`
 
 			if (requestedAmount > amountToPlant) {
 				if (amountToPlant === availableSlots) {

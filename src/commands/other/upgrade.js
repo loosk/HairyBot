@@ -11,6 +11,7 @@ const UserProfile = require('../../models/userProfile')
 const { sendNoProfileMessage } = require('../../utils/showNoProfileMessage')
 const upgrades = require('../../data/upgrades')
 
+const activeTransactions = new Set(); 
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -28,7 +29,7 @@ module.exports = {
 
 			const generateUpgradeUI = (profileData) => {
 				const currentUpgrade = upgrades[currentPage];
-				const userLevel = profileData.upgrades.get(currentUpgrade.id) || 0;
+				const userLevel = parseInt(profileData.upgrades.get(currentUpgrade.id), 10) || 0; 
 
 				const totalPages = upgrades.length;
 
@@ -101,43 +102,58 @@ module.exports = {
 				if (i.user.id !== interaction.user.id) {
 					return i.reply({ content: "This isn't your upgrade menu!", ephemeral: true });
 				}
-                    
-                const latestProfile = await UserProfile.findOne({ userId: i.user.id });
 
 				if (i.customId === 'prev') {
+                    const latestProfile = await UserProfile.findOne({ userId: i.user.id });
 					currentPage--;
 					return i.update(generateUpgradeUI(latestProfile));
 				}
 
 				if (i.customId === 'next') {
+                    const latestProfile = await UserProfile.findOne({ userId: i.user.id });
 					currentPage++;
 					return i.update(generateUpgradeUI(latestProfile));
 				}
 
 				if (i.customId.startsWith('buy_')) {
-                    const upgradeId = i.customId.replace('buy_', '');
-                    const upgradeData = upgrades.find(u => u.id === upgradeId);
-                    const currentLevel = latestProfile.upgrades.get(upgradeId) || 0;
-                    const cost = Math.round(upgradeData.cost(currentLevel));
-
-                    if (latestProfile.bloomBuck < cost) {
-                        return i.reply({ content: `You need 💵 ${cost} to buy this upgrade!`, ephemeral: true });
+                    if (activeTransactions.has(i.user.id)) {
+                        return i.reply({ content: 'Processing your purchase, please wait...', ephemeral: true });
                     }
-                    if (currentLevel >= upgradeData.maxLevel) {
-                        return i.reply({ content: `You have already reached the max level for this upgrade.`, ephemeral: true });
-                    }
-
-                    latestProfile.bloomBuck -= cost;
-                    latestProfile.upgrades.set(upgradeId, currentLevel + 1);
-
-                    if (upgradeId === 'garden_slots') {
-                        latestProfile.maxSlots = (latestProfile.maxSlots || 1) + 1; 
-                    }
-
-                    await latestProfile.save();
                     
-                    await i.update(generateUpgradeUI(latestProfile));
-                    return i.followUp({ content: `Successfully upgraded **${upgradeData.name}** to Level ${currentLevel + 1}!`, ephemeral: true });
+                    activeTransactions.add(i.user.id);
+
+                    try {
+                        const latestProfile = await UserProfile.findOne({ userId: i.user.id });
+                        const upgradeId = i.customId.replace('buy_', '');
+                        const upgradeData = upgrades.find(u => u.id === upgradeId);
+                        
+                        const currentLevel = parseInt(latestProfile.upgrades.get(upgradeId), 10) || 0;
+                        const cost = Math.round(upgradeData.cost(currentLevel));
+
+                        if (latestProfile.bloomBuck < cost) {
+                            return i.reply({ content: `You need 💵 ${cost} to buy this upgrade!`, ephemeral: true });
+                        }
+                        if (currentLevel >= upgradeData.maxLevel) {
+                            return i.reply({ content: `You have already reached the max level for this upgrade.`, ephemeral: true });
+                        }
+
+                        latestProfile.bloomBuck -= cost;
+                        latestProfile.upgrades.set(upgradeId, currentLevel + 1);
+
+                        if (upgradeId === 'garden_slots') {
+                            latestProfile.maxSlots = (latestProfile.maxSlots || 1) + 1; 
+                        }
+
+                        await latestProfile.save();
+                        
+                        await i.update(generateUpgradeUI(latestProfile));
+                        return i.followUp({ content: `Successfully upgraded **${upgradeData.name}** to Level ${currentLevel + 1}!`, ephemeral: true });
+                    } catch (error) {
+                        console.error('Error during purchase:', error);
+                        return i.reply({ content: 'An error occurred while processing your purchase.', ephemeral: true });
+                    } finally {
+                        activeTransactions.delete(i.user.id);
+                    }
 				}
 			});
 
@@ -151,9 +167,7 @@ module.exports = {
 						embeds: disabledUi.embeds,
 						components: disabledUi.components,
 					});
-				} catch (err) {
-                    console.error("Failed to edit reply on upgrade collector end:", err);
-                }
+				} catch (err) {}
 			});
 		} catch (err) {
 			console.error('Error in /upgrade command:', err);

@@ -20,6 +20,18 @@ const userProfileSchema = new Schema({
 	// { "Wheat": 123, "Tomato": 123 }
 	seeds: { type: Map, of: Number, default: {} },
 
+	eggs: [{
+            name: String,
+        }
+    ],
+
+	activeEggs: [
+		{
+			name: String,
+    		hatchReadyAt: Number
+		}
+	],
+
 	// { plantName: "Wheat", readyAt: 123 }
 	activeGarden: [
 		{
@@ -43,6 +55,19 @@ const userProfileSchema = new Schema({
 			isFavorited: { type: Boolean, default: false },
 		},
 	],
+
+	pets: [
+  		{	
+			name: String,
+    		nickname: String,
+    		isActive: { type: Boolean, default: false },
+    		age: { type: Number, default: 0 },
+   			exp: { type: Number, default: 0 },
+    		hunger: { type: Number, min: 0, max: 100, default: 100 },
+  		},
+	],
+
+	maxActivePets: { type: Number, default: 1 },
 
 	completedAchievements: {
 		type: [String],
