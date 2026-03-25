@@ -12,4 +12,40 @@ module.exports = {
 			},
 		],
 	},
+
+	"Cow": {
+		description: 'A common domesticated animal',
+		rarity: 'common',
+
+		abilities: [
+			{
+				type: 'growth_speed',
+				value: 0.9, // only need 90% of the total time to grow
+			},
+		],
+	},
+
+	"Cat": {
+		description: 'A common domesticated animal',
+		rarity: 'common',
+
+		abilities: [
+			{
+				type: 'growth_speed',
+				value: 0.9, // only need 90% of the total time to grow
+			},
+		],
+	},
+
+	"Chicken": {
+		description: 'A common domesticated animal',
+		rarity: 'common',
+
+		abilities: [
+			{
+				type: 'growth_speed',
+				value: 0.9, // only need 90% of the total time to grow
+			},
+		],
+	},
 }

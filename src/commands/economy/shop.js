@@ -8,14 +8,14 @@ const {
 	ModalBuilder,
 	TextInputBuilder,
 	TextInputStyle,
-    StringSelectMenuBuilder, // Import the select menu builder
+    StringSelectMenuBuilder,
 } = require('discord.js')
 const { checkAchievements } = require('../../utils/checkAchievements')
 const { processNewlyUnlockedAchievements } = require('../../utils/processNewlyUnlockedAchievements')
 
 const UserProfile = require('../../models/userProfile')
 const plantsData = require('../../data/plantsData')
-const eggsData = require('../../data/eggsData') // Import your new egg data
+const eggsData = require('../../data/eggsData')
 const { sendNoProfileMessage } = require('../../utils/showNoProfileMessage')
 
 const shopData = {
@@ -23,13 +23,13 @@ const shopData = {
         items: {},
         purchases: new Map(),
         nextRefresh: 0,
-        refreshInterval: 5 * 60 * 1000 // 5 minutes
+        refreshInterval: 5 * 60 * 1000
     },
     eggs: {
         items: {},
         purchases: new Map(),
         nextRefresh: 0,
-        refreshInterval: 30 * 60 * 1000 // 30 minutes
+        refreshInterval: 30 * 60 * 1000
     }
 };
 
@@ -103,7 +103,7 @@ module.exports = {
                         const maxMins = Math.round(item.growTimeMax / 60000);
                         const stockStatus = item.personalStock > 0 ? ` ${item.personalStock} left in stock!` : `SOLD OUT`;
                         embed.addFields({
-                            name: `🌱 ${item.name} Seed`,
+                            name: `${item.name} Seed`,
                             value: `Cost: 💵 ${item.seedCost}\n${stockStatus}\n`,
                             inline: false,
                         });
@@ -112,13 +112,12 @@ module.exports = {
                     currentItems.forEach(item => {
                         const stockStatus = item.personalStock > 0 ? ` ${item.personalStock} left in stock!` : `SOLD OUT`;
                         embed.addFields({
-                            name: `🥚 ${item.name}`,
+                            name: `${item.name}`,
                             value: `Cost: 💵 ${item.cost}\n${stockStatus}\n`,
                             inline: false,
                         });
                     });
                 }
-
 
 				const components = [];
 
@@ -138,8 +137,17 @@ module.exports = {
                 
                 const navRow = new ActionRowBuilder();
 				navRow.addComponents(
-					new ButtonBuilder().setCustomId('prev').setEmoji({ id: '1485229572189589555' }).setStyle(ButtonStyle.Primary).setDisabled(currentPage === 0),
-					new ButtonBuilder().setCustomId('next').setEmoji({ id: '1485228358575853689' }).setStyle(ButtonStyle.Primary).setDisabled(currentPage >= totalPages - 1),
+					new ButtonBuilder()
+						.setCustomId('prev')
+						.setEmoji({ id: '1485229572189589555' })	
+						.setStyle(ButtonStyle.Primary)	
+						.setDisabled(currentPage === 0),
+
+					new ButtonBuilder()
+						.setCustomId('next')
+						.setEmoji({ id: '1485228358575853689' })
+						.setStyle(ButtonStyle.Primary)
+						.setDisabled(currentPage >= totalPages - 1),
 				);
 				
                 const selectMenu = new StringSelectMenuBuilder()
@@ -162,7 +170,7 @@ module.exports = {
 			const collectorTime = Math.min(shopData.plants.nextRefresh, shopData.eggs.nextRefresh) - Date.now();
 
 			const collector = response.createMessageComponentCollector({
-				time: collectorTime > 0 ? collectorTime : 60000,
+				time: collectorTime > 0 ? collectorTime : 120000,
 			})
 
 			collector.on('collect', async i => {
@@ -205,6 +213,55 @@ module.exports = {
                     if (type === 'plants') {
                         const myInitialStock = getMyStock('plants', itemName);
                         if (myInitialStock <= 0) return i.reply({ content: `Sold out!`, ephemeral: true });
+
+                        const modal = new ModalBuilder().setCustomId(`buy_modal_${itemName}`).setTitle(`Buying ${itemName} Seeds`);
+                        const amountInput = new TextInputBuilder().setCustomId('amount_input').setLabel(`How many? (Max: ${myInitialStock})`).setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder('Enter a number...').setMinLength(1).setMaxLength(4);
+                        modal.addComponents(new ActionRowBuilder().addComponents(amountInput));
+                        await i.showModal(modal);
+
+                        try {
+                            const modalSubmit = await i.awaitModalSubmit({ filter: mi => mi.customId === `buy_modal_${itemName}` && mi.user.id === i.user.id, time: 60000 });
+                            
+                            if (Date.now() >= shopData.plants.nextRefresh) {
+                                return modalSubmit.reply({ content: 'The shop restocked while you were deciding! Please check new stock.', ephemeral: true });
+                            }
+
+                            const amountStr = modalSubmit.fields.getTextInputValue('amount_input');
+                            const amount = parseInt(amountStr, 10);
+
+                            if (isNaN(amount) || amount <= 0) {
+                                return modalSubmit.reply({ content: 'That is not a valid number! Please try again.', ephemeral: true });
+                            }
+                            const currentStock = getMyStock('plants', itemName);
+                            if (amount > currentStock) {
+                                return modalSubmit.reply({ content: `You can't buy that many! Only ${currentStock} left.`, ephemeral: true });
+                            }
+                            const totalCost = itemData.seedCost * amount;
+                            if (userProfile.bloomBuck < totalCost) {
+                                return modalSubmit.reply({ content: `You need 💵 **${totalCost}** for that!`, ephemeral: true });
+                            }
+
+                            const tracker = userProfile.tracking.buySeeds;
+                            tracker.set(itemName, (tracker.get(itemName) || 0) + amount);
+                            tracker.set('total', (tracker.get('total') || 0) + amount);
+
+                            userProfile.bloomBuck -= totalCost;
+                            userProfile.seeds.set(itemName, (userProfile.seeds.get(itemName) || 0) + amount);
+                            userProfile.markModified('tracking');
+                            const newlyUnlockedAchievements = await checkAchievements(userProfile);
+                            await userProfile.save();
+
+                            const config = shopData.plants;
+                            const userHistory = config.purchases.get(interaction.user.id) || {};
+                            userHistory[itemName] = (userHistory[itemName] || 0) + amount;
+                            config.purchases.set(interaction.user.id, userHistory);
+                            
+                            await modalSubmit.update(generateShopUI(userProfile, currentView));
+                            await modalSubmit.followUp({ content: `Bought **${amount}x ${itemName} Seed(s)** for 💵 **${totalCost}**!`, ephemeral: true });
+                            await processNewlyUnlockedAchievements(interaction, newlyUnlockedAchievements);
+
+                        } catch (err) {}
+
                     } else if (type === 'eggs') {
                         const myInitialStock = getMyStock('eggs', itemName);
                         if (myInitialStock <= 0) return i.reply({ content: `Sold out!`, ephemeral: true });
@@ -215,14 +272,9 @@ module.exports = {
 						}
                         
                         userProfile.bloomBuck -= totalCost;
-
-						if (!userProfile.eggs) userProfile.eggs = [];
-
-						userProfile.eggs.push({
-    						name: itemName
-						});
-
-						await userProfile.save();
+                        if (!userProfile.eggs) userProfile.eggs = [];
+                        userProfile.eggs.push({ eggName: itemName, hatchReadyAt: 0 });
+                        await userProfile.save();
 
                         const config = shopData.eggs;
                         const userHistory = config.purchases.get(interaction.user.id) || {};

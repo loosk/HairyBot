@@ -2,6 +2,8 @@ const { Schema, model } = require('mongoose')
 const {
 	baseGardenSlots,
 	startingBloomBuck,
+	baseActiveEggSlots,
+	baseActivePetSlots,
 	upgradeCost,
 } = require('../constants/config')
 
@@ -16,11 +18,14 @@ const userProfileSchema = new Schema({
   	},
 
 	maxSlots: { type: Number, default: baseGardenSlots },
+	maxPets: { type: Number, default: baseActivePetSlots },
+	maxActiveEggs: { type:Number, default: baseActivePetSlots },
 
 	// { "Wheat": 123, "Tomato": 123 }
 	seeds: { type: Map, of: Number, default: {} },
 
-	eggs: [{
+	eggs: [
+		{
             name: String,
         }
     ],

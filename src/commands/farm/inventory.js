@@ -5,16 +5,16 @@ const {
 	ButtonBuilder,
 	ButtonStyle,
 	ComponentType,
-} = require('discord.js')
+	StringSelectMenuBuilder,
+} = require('discord.js');
 
-const UserProfile = require('../../models/userProfile')
-const { sendNoProfileMessage } = require('../../utils/showNoProfileMessage')
+const UserProfile = require('../../models/userProfile');
+const { sendNoProfileMessage } = require('../../utils/showNoProfileMessage');
 
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('inventory')
-		.setDescription('View all your harvested plants and mutations.')
-
+		.setDescription('View your harvested plants, eggs, and pets.')
 		.addUserOption(option =>
 			option
 				.setName('user')
@@ -23,155 +23,142 @@ module.exports = {
 		),
 
 	async execute(interaction) {
-		await interaction.deferReply()
+		await interaction.deferReply();
 
 		try {
-			const targetUser =
-				interaction.options.getUser('user') || interaction.user
+			const targetUser = interaction.options.getUser('user') || interaction.user;
+			const profile = await UserProfile.findOne({ userId: targetUser.id });
 
-			const profile = await UserProfile.findOne({ userId: targetUser.id })
+			if (!profile) return sendNoProfileMessage(interaction);
 
-			if (!profile) {
-				return sendNoProfileMessage(interaction)
-			}
+			let currentView = 'plants';
+			let currentPage = 0;
+			const itemsPerPage = 10;
 
-			if (!profile.inventory || profile.inventory.length === 0) {
-				const emptyEmbed = new EmbedBuilder()
-					.setTitle(`${targetUser.username}'s Inventory`)
-					.setColor('#E74C3C')
-					.setDescription(
-						'Your inventory is completely empty! Harvest some crops from your `/garden`.',
-					)
+			const generateInventoryUI = (view, page) => {
+				let dataArray = [];
+				if (view === 'plants') dataArray = profile.inventory || [];
+				if (view === 'eggs') dataArray = profile.eggs || [];
+				if (view === 'pets') dataArray = profile.pets || [];
 
-				return interaction.editReply({ embeds: [emptyEmbed] })
-			}
-
-			const itemsPerPage = 10
-			const totalPages = Math.ceil(
-				profile.inventory.length / itemsPerPage,
-			)
-			let currentPage = 0
-
-			const totalInventoryValue = Math.round(
-				profile.inventory.reduce(
-					(total, item) => total + item.value,
-					0,
-				),
-			)
-
-			const generateInventoryUI = () => {
-				const start = currentPage * itemsPerPage
-				const currentItems = profile.inventory.slice(
-					start,
-					start + itemsPerPage,
-				)
+				const totalPages = Math.ceil(dataArray.length / itemsPerPage) || 1;
+				const start = page * itemsPerPage;
+				const currentItems = dataArray.slice(start, start + itemsPerPage);
 
 				const embed = new EmbedBuilder()
-					.setTitle(`${targetUser.username}'s Harvested Crops`)
 					.setColor('#3498DB')
-					.setDescription(
-						`**Total Inventory Value:** 💵 ${totalInventoryValue} BloomBucks\n\n*Page ${currentPage + 1} of ${totalPages}*`,
-					)
+					.setFooter({ text: `Page ${page + 1} of ${totalPages}` });
 
-				currentItems.forEach((item, index) => {
-					const itemIndex = start + index + 1
+				if (view === 'plants') {
+					embed.setTitle(`${targetUser.username}'s Harvested Crops`);
+					
+					const totalValue = Math.round(dataArray.reduce((total, item) => total + (item.value || 0), 0));
+					embed.setDescription(`**Total Value:** 💵 ${totalValue} BloomBucks\n\n`);
 
-					let prefix = ''
+					if (currentItems.length === 0) embed.addFields({ name: 'Empty', value: 'You have no harvested crops.' });
 
-					if (item.variant && item.variant !== 'Normal') {
-						prefix += `${item.variant} `
-					}
+					currentItems.forEach((item, index) => {
+						let prefix = '';
+						if (item.variant && item.variant !== 'Normal') prefix += `${item.variant} `;
+						if (item.mutation && item.mutation.length > 0) prefix += `${item.mutation.join(' ')} `;
+						
+						embed.addFields({
+							name: `${start + index + 1}. **${prefix}${item.name || item.plantName}** (${item.weight}kg)`,
+							value: `**Sell Value:** 💵 ${Math.round(item.value || 0)}`,
+							inline: false,
+						});
+					});
 
-					if (item.mutation && item.mutation.length > 0) {
-						prefix += `${item.mutation.join(' ')} `
-					}
+				} else if (view === 'eggs') {
+					embed.setTitle(`${targetUser.username}'s Egg Incubator`);
+					embed.setDescription('Eggs you have purchased and are waiting to hatch.\n\n');
 
-					const fieldName = `${itemIndex}. **${prefix}${item.name}** (${item.weight}kg)`
+					if (currentItems.length === 0) embed.addFields({ name: 'Empty', value: 'You have no eggs.' });
 
-					const fieldValue = `**Sell Value:** 💵 ${Math.round(item.value)}`
+					currentItems.forEach((item, index) => {
+						const status = item.hatchReadyAt === 0 ? 'Ready to hatch!' : 'Incubating...';
+						embed.addFields({
+							name: `${start + index + 1}. **${item.eggName || item.name}**`,
+							value: `Status: ${status}`,
+							inline: false,
+						});
+					});
 
-					embed.addFields({
-						name: fieldName,
-						value: fieldValue,
-						inline: false,
-					})
-				})
+				} else if (view === 'pets') {
+					embed.setTitle(`${targetUser.username}'s Pets`);
+					embed.setDescription('Your faithful farm companions.\n\n');
 
-				const components = []
-				if (totalPages > 1) {
-					const navRow = new ActionRowBuilder().addComponents(
-						new ButtonBuilder()
-							.setCustomId('prev')
-							.setEmoji({ id: '1485229572189589555', name: 'rightWhiteArrow' })
-							
-							.setStyle(ButtonStyle.Secondary)
-							.setDisabled(currentPage === 0),
+					if (currentItems.length === 0) embed.addFields({ name: 'Empty', value: 'You have no pets.' });
 
-						new ButtonBuilder()
-							.setCustomId('next')
-							.setEmoji({ id: '1485228358575853689', name: 'whiteArrow' })
-							.setStyle(ButtonStyle.Secondary)
-							.setDisabled(currentPage >= totalPages - 1),
-					)
-					components.push(navRow)
+					currentItems.forEach((item, index) => {
+						const equippedText = item.isActive ? '**[EQUIPPED]**' : '';
+						const nicknameText = item.nickname ? `"${item.nickname}" ` : '';
+						embed.addFields({
+							name: `${start + index + 1}. ${nicknameText}(${item.petName || item.petId}) ${equippedText}`,
+							value: `Age: ${item.age || 1} | Hunger: ${item.hunger || 100}/100`,
+							inline: false,
+						});
+					});
 				}
 
-				return { embeds: [embed], components: components }
-			}
+				const components = [];
 
-			const response = await interaction.editReply(generateInventoryUI())
+				const selectMenu = new StringSelectMenuBuilder()
+					.setCustomId('inventory_view_select')
+					.setPlaceholder('Change Inventory Category')
+					.addOptions(
+						{ label: 'Harvested Crops', description: 'View crops ready to sell.', value: 'plants'},
+						{ label: 'Pet Eggs', description: 'View unhatched eggs.', value: 'eggs'},
+						{ label: 'Pets', description: 'View your companions.', value: 'pets'}
+					);
+				components.push(new ActionRowBuilder().addComponents(selectMenu));
 
-			if (totalPages > 1) {
-				const collector = response.createMessageComponentCollector({
-					componentType: ComponentType.Button,
-					time: 120000,
-				})
+				if (totalPages > 1) {
+					const navRow = new ActionRowBuilder().addComponents(
+						new ButtonBuilder().setCustomId('prev').setEmoji({ id: '1485229572189589555', name: 'rightWhiteArrow' }).setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+						new ButtonBuilder().setCustomId('next').setEmoji({ id: '1485228358575853689', name: 'whiteArrow' }).setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
+					);
+					components.push(navRow);
+				}
 
-				collector.on('collect', async i => {
-					if (i.user.id !== targetUser.id) {
-						return i.reply({
-							content:
-								"You cannot click buttons on someone else's inventory!",
-							ephemeral: true,
-						})
-					}
+				return { embeds: [embed], components: components };
+			};
 
-					if (i.customId === 'prev') {
-						currentPage--
-					} else if (i.customId === 'next') {
-						currentPage++
-					}
-					await i.update(generateInventoryUI())
-				})
+			const response = await interaction.editReply(generateInventoryUI(currentView, currentPage));
 
-				collector.on('end', async () => {
-					const disabledUi = generateInventoryUI()
-					disabledUi.components.forEach(row => {
-						row.components.forEach(button =>
-							button.setDisabled(true),
-						)
-					})
+			const collector = response.createMessageComponentCollector({
+				time: 120000,
+			});
 
-					try {
-						await interaction.editReply({
-							embeds: disabledUi.embeds,
-							components: disabledUi.components,
-						})
-					} catch (err) {
-						if (err.code !== 10008) {
-							console.error(
-								'Failed to disable inventory buttons:',
-								err,
-							)
-						}
-					}
-				})
-			}
+			collector.on('collect', async i => {
+				if (i.user.id !== interaction.user.id) {
+					return i.reply({ content: "You cannot click buttons on this menu!", ephemeral: true });
+				}
+
+				if (i.isStringSelectMenu()) {
+					currentView = i.values[0];
+					currentPage = 0;
+					await i.update(generateInventoryUI(currentView, currentPage));
+					return;
+				}
+
+				if (i.customId === 'prev') currentPage--;
+				if (i.customId === 'next') currentPage++;
+				
+				await i.update(generateInventoryUI(currentView, currentPage));
+			});
+
+			collector.on('end', async () => {
+				try {
+					const disabledUi = generateInventoryUI(currentView, currentPage);
+					disabledUi.components.forEach(row => row.components.forEach(comp => comp.setDisabled(true)));
+					await interaction.editReply({ components: disabledUi.components });
+				} catch (err) {}
+			});
+
 		} catch (err) {
-			console.error('Error in /inventory command:', err)
-			return interaction.editReply(
-				'Something went wrong while trying to open your inventory.',
-			)
+			console.error('Error in /inventory command:', err);
+			return interaction.editReply('Something went wrong while trying to open your inventory.');
 		}
 	},
-}
+};

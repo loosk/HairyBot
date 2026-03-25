@@ -1,6 +1,8 @@
 module.exports = {
 	startingBloomBuck: 50,
 	baseGardenSlots: 5,
+	baseActiveEggSlots: 3,
+	baseActivePetSlots: 3,
 	upgradeCost: 500,
 
 	variants: [
