@@ -115,21 +115,28 @@ client.on(Events.InteractionCreate, async interaction => {
 	setTimeout(() => timestamps.delete(interaction.user.id), cooldownAmount)
 
 	try {
-		console.log({ interaction })
-		await command.execute(interaction)
-	} catch (error) {
-		console.log(util.inspect(error, { depth: null }))
-		if (interaction.replied || interaction.deferred) {
-			await interaction.followUp({
-				content: 'There was an error while executing this command!',
-				flags: MessageFlags.Ephemeral,
-			})
-		} else {
-			await interaction.reply({
-				content: 'There was an error while executing this command!',
-				flags: MessageFlags.Ephemeral,
-			})
+		try {
+			await command.execute(interaction)
+		} catch (error) {
+			console.error(
+				`Error executing command ${interaction.commandName}:`,
+				error,
+			)
+			
+			if (interaction.replied || interaction.deferred) {
+				await interaction.followUp({
+					content: 'There was an error while executing this command!',
+					flags: MessageFlags.Ephemeral,
+				})
+			} else {
+				await interaction.reply({
+					content: 'There was an error while executing this command!',
+					flags: MessageFlags.Ephemeral,
+				})
+			}
 		}
+	} catch (err) {
+		console.error('Error handling interaction:', err)
 	}
 })
 
