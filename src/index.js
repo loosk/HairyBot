@@ -106,7 +106,7 @@ client.on(Events.InteractionCreate, async interaction => {
 			const timeLeft = ((expirationTime - now) / 1000).toFixed(1)
 			return interaction.reply({
 				content: `Please wait **${timeLeft}s** before reusing \`${command.data.name}\`.`,
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			})
 		}
 	}
@@ -115,21 +115,28 @@ client.on(Events.InteractionCreate, async interaction => {
 	setTimeout(() => timestamps.delete(interaction.user.id), cooldownAmount)
 
 	try {
-		console.log({ interaction })
-		await command.execute(interaction)
-	} catch (error) {
-		console.log(util.inspect(error, { depth: null }))
-		if (interaction.replied || interaction.deferred) {
-			await interaction.followUp({
-				content: 'There was an error while executing this command!',
-				flags: MessageFlags.Ephemeral,
-			})
-		} else {
-			await interaction.reply({
-				content: 'There was an error while executing this command!',
-				flags: MessageFlags.Ephemeral,
-			})
+		try {
+			await command.execute(interaction)
+		} catch (error) {
+			console.error(
+				`Error executing command ${interaction.commandName}:`,
+				error,
+			)
+			
+			if (interaction.replied || interaction.deferred) {
+				await interaction.followUp({
+					content: 'There was an error while executing this command!',
+					flags: MessageFlags.Ephemeral,
+				})
+			} else {
+				await interaction.reply({
+					content: 'There was an error while executing this command!',
+					flags: MessageFlags.Ephemeral,
+				})
+			}
 		}
+	} catch (err) {
+		console.error('Error handling interaction:', err)
 	}
 })
 
@@ -144,9 +151,11 @@ async function startBot() {
 			socketTimeoutMS: 45000,
 			family: 4,
 		})
+
 		console.log('Connected to MongoDB!')
 	} catch (err) {
 		console.error('MongoDB connection error:', err)
+
 		process.exit(1)
 	}
 
